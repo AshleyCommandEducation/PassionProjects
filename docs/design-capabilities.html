@@ -314,9 +314,9 @@
             <th class="sortable">Timeline</th>
           </tr>
         </thead>
-        <tbody id="canDoBody"></tbody>
+        <tbody id="can-doBody"></tbody>
       </table>
-      <div id="canDoNoResults" class="no-results" style="display: none;">No tasks match your search.</div>
+      <div id="can-doNoResults" class="no-results" style="display: none;">No tasks match your search.</div>
     </div>
 
     <!-- CANNOT DO SECTION -->
@@ -328,9 +328,9 @@
             <th>Description</th>
           </tr>
         </thead>
-        <tbody id="cannotDoBody"></tbody>
+        <tbody id="cannot-doBody"></tbody>
       </table>
-      <div id="cannotDoNoResults" class="no-results" style="display: none;">No tasks match your search.</div>
+      <div id="cannot-doNoResults" class="no-results" style="display: none;">No tasks match your search.</div>
     </div>
 
     <footer>
@@ -340,7 +340,8 @@
 
   <!-- 📊 DATA — EASY TO UPDATE 📊 -->
   <script>
-    const canDoTasks = [
+    // Data source
+    const canDoData = [
       { type: "Book Layouts", description: "Designing interior layouts for printed books, with styled typography and images. Used for memoirs, guidebooks, portfolios, or self-published works.", timeline: "2–4 weeks", timelineSort: 28 },
       { type: "Digital Ads", description: "Creating web and social ads optimized for engagement, including Google display banners and Instagram story graphics for promotions or launches.", timeline: "3–7 days", timelineSort: 5 },
       { type: "E-Book Design", description: "Formatting e-books with styled text, interactive links, and covers. Prepared for platforms like Kindle or Amazon KDP, including print-ready or print-on-demand versions.", timeline: "1.5–3 weeks", timelineSort: 21 },
@@ -360,7 +361,7 @@
       { type: "Website Maintenance", description: "Making updates to keep sites fresh and functional, adding new content, fixing layout issues, or adjusting styles after launch.", timeline: "1–5 days", timelineSort: 3 },
     ];
 
-    const cannotDoTasks = [
+    const cannotDoData = [
       { type: "3D Design", description: "We do not create 3D models, renders, or animations. These projects are time-intensive and require specialized tools. Students should connect with a 3D designer early if this is needed." },
       { type: "Animation or Motion Graphics", description: "We do not produce animations or motion graphics. This includes animated titles or advanced video editing. Students should seek out a motion designer if this is part of their vision." },
       { type: "Children's Books Requiring Illustrations", description: "We do not create original illustrations for books. We can assist with layout, suggest illustrators, or guide students who want to illustrate their work." },
@@ -370,7 +371,8 @@
       { type: "Product Photography", description: "We do not offer photography services. We support photo editing and retouching, but image capture should be handled by a dedicated photographer." },
     ];
 
-    // 🔧 INITIALIZATION 🔧
+    let canDoTasks = JSON.parse(JSON.stringify(canDoData));
+    let cannotDoTasks = JSON.parse(JSON.stringify(cannotDoData));
     let currentSort = null;
     let currentSection = 'can-do';
 
@@ -379,34 +381,42 @@
       const tableBody = document.getElementById(`${section}Body`);
       const noResults = document.getElementById(`${section}NoResults`);
 
-      if (tasks.length === 0) {
-        tableBody.innerHTML = '';
-        noResults.style.display = 'block';
+      if (!tableBody) {
+        console.error(`Table body not found for section: ${section}`);
         return;
       }
 
-      noResults.style.display = 'none';
-      tableBody.innerHTML = tasks.map(task => `
-        <tr>
+      tableBody.innerHTML = '';
+
+      tasks.forEach(task => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
           <td class="task-type">${task.type}</td>
           <td>${task.description}</td>
           ${section === 'can-do' ? `<td class="timeline">${task.timeline}</td>` : ''}
-        </tr>
-      `).join('');
+        `;
+        tableBody.appendChild(row);
+      });
+
+      if (tableBody.children.length === 0 && noResults) {
+        noResults.style.display = 'block';
+      } else if (noResults) {
+        noResults.style.display = 'none';
+      }
     }
 
     function filterTasks(searchTerm) {
       const searchLower = searchTerm.toLowerCase();
 
-      canDoTasks.forEach(task => {
-        task.visible = task.type.toLowerCase().includes(searchLower) || 
-                       task.description.toLowerCase().includes(searchLower);
-      });
+      canDoTasks = canDoData.filter(task =>
+        task.type.toLowerCase().includes(searchLower) ||
+        task.description.toLowerCase().includes(searchLower)
+      );
 
-      cannotDoTasks.forEach(task => {
-        task.visible = task.type.toLowerCase().includes(searchLower) || 
-                       task.description.toLowerCase().includes(searchLower);
-      });
+      cannotDoTasks = cannotDoData.filter(task =>
+        task.type.toLowerCase().includes(searchLower) ||
+        task.description.toLowerCase().includes(searchLower)
+      );
 
       renderTable('can-do');
       renderTable('cannot-do');
@@ -416,48 +426,52 @@
       if (currentSort === 'asc') {
         canDoTasks.sort((a, b) => b.timelineSort - a.timelineSort);
         currentSort = 'desc';
-        document.getElementById('sortTimelineBtn').classList.add('active');
       } else {
         canDoTasks.sort((a, b) => a.timelineSort - b.timelineSort);
         currentSort = 'asc';
-        document.getElementById('sortTimelineBtn').classList.add('active');
       }
+      document.getElementById('sortTimelineBtn').classList.toggle('active');
       renderTable('can-do');
     }
 
     function resetView() {
       document.getElementById('searchInput').value = '';
-      canDoTasks.sort((a, b) => canDoTasks.indexOf(a) - canDoTasks.indexOf(b));
-      cannotDoTasks.sort((a, b) => cannotDoTasks.indexOf(a) - cannotDoTasks.indexOf(b));
+      canDoTasks = JSON.parse(JSON.stringify(canDoData));
+      cannotDoTasks = JSON.parse(JSON.stringify(cannotDoData));
       currentSort = null;
       document.getElementById('sortTimelineBtn').classList.remove('active');
       renderTable('can-do');
       renderTable('cannot-do');
     }
 
-    // 🎯 EVENT LISTENERS 🎯
-    document.getElementById('searchInput').addEventListener('input', (e) => {
-      filterTasks(e.target.value);
-    });
-
-    document.getElementById('sortTimelineBtn').addEventListener('click', sortByTimeline);
-    document.getElementById('resetBtn').addEventListener('click', resetView);
-
-    document.querySelectorAll('.section-tab').forEach(tab => {
-      tab.addEventListener('click', (e) => {
-        document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
-        document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
-        
-        e.target.classList.add('active');
-        const section = e.target.dataset.section;
-        document.getElementById(section).classList.add('active');
-        currentSection = section;
+    // Event listeners
+    document.addEventListener('DOMContentLoaded', function() {
+      document.getElementById('searchInput').addEventListener('input', (e) => {
+        filterTasks(e.target.value);
       });
-    });
 
-    // Initial render
-    renderTable('can-do');
-    renderTable('cannot-do');
+      document.getElementById('sortTimelineBtn').addEventListener('click', sortByTimeline);
+      document.getElementById('resetBtn').addEventListener('click', resetView);
+
+      document.querySelectorAll('.section-tab').forEach(tab => {
+        tab.addEventListener('click', (e) => {
+          document.querySelectorAll('.section-tab').forEach(t => t.classList.remove('active'));
+          document.querySelectorAll('.content-section').forEach(s => s.classList.remove('active'));
+          
+          e.target.classList.add('active');
+          const section = e.target.dataset.section;
+          const sectionElement = document.getElementById(section);
+          if (sectionElement) {
+            sectionElement.classList.add('active');
+            currentSection = section;
+          }
+        });
+      });
+
+      // Initial render
+      renderTable('can-do');
+      renderTable('cannot-do');
+    });
   </script>
 </body>
 </html>
